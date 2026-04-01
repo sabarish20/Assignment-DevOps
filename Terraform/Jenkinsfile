@@ -5,6 +5,9 @@ pipeline {
             args  '--entrypoint='
         }
     }
+    parameters {
+        choice(name: 'ACTION', choices: ['apply', 'destroy'], description: 'Select the action to perform on the S3 bucket')
+    }
     environment {
         AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
         AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
@@ -33,23 +36,21 @@ pipeline {
         stage('Manual Approval') {
             agent none 
             steps {
-                script {
-                    def userInput = input(
-                        id: 'userInput',
-                        message: 'Review the Terraform Plan. Do you want to apply these changes?',
-                        parameters: [
-                            [$class: 'BooleanParameterDefinition', defaultValue: false, description: 'Terraform Changes', name: 'confirm']
-                        ]
-                    )
-                }
+                input message: "Are you sure you want to ${params.ACTION} the resources?", ok: "Proceed with ${params.ACTION}"
             }
         }
-        stage('Terraform Apply') {
+        stage('Terraform Action') {
             steps {
-                dir('Terraform'){
-                    sh 'terraform apply -auto-approve tfplan'
-                }
+                dir('Terraform') {
+                    script {
+                        if (params.ACTION == 'destroy') {
+                            sh 'terraform apply "destroyplan"'
+                        } else {
+                            sh 'terraform apply "tfplan"'
+                        }
+                    }
+                }       
             }
         }
     }
-}
+}    
