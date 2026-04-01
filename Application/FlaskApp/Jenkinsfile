@@ -7,15 +7,11 @@ pipeline {
     }
 
     environment {
-        AWS_REGION       = 'ap-south-1'
-        AWS_ACCOUNT_ID   =  credentials('AWS_ACCOUNT_ID')
-        ECR_REGISTRY     =  credentials('ECR_REGISTRY')
-
-        BACKEND_IMAGE    = 'ecolibirium-backend'
-        FRONTEND_IMAGE   = 'ecolibirium-frontend'
-        IMAGE_TAG        = "${env.BUILD_NUMBER}"
-
-        CLUSTER_NAME     = 'ecolibirium-eks-cluster'
+        AWS_REGION     = 'ap-south-1'
+        ECR_REGISTRY   = credentials('ECR_REGISTRY')
+        BACKEND_IMAGE  = 'eco-assignment-backend'
+        FRONTEND_IMAGE = 'eco-assignment-frontend'
+        IMAGE_TAG      = "${env.BUILD_NUMBER}"
     }
 
     stages {
@@ -24,29 +20,84 @@ pipeline {
             steps {
                 sh '''
                     apt-get update -y
-                    apt-get install -y curl unzip docker.io
+                    apt-get install -y curl unzip docker.io wget apt-transport-https gnupg
+
+                    wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | apt-key add -
+                    echo "deb https://aquasecurity.github.io/trivy-repo/deb generic main" > /etc/apt/sources.list.d/trivy.list
+                    apt-get update -y
+                    apt-get install -y trivy
                 '''
             }
         }
 
-        stage('Build & Push to ECR') {
+        stage('Build') {
             parallel {
                 stage('Backend') {
                     steps {
                         script {
-                            docker.withRegistry("https://${ECR_REGISTRY}", "ecr:${AWS_REGION}:aws-credentials") {
-                                def img = docker.build("${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG}", "./Application/FlaskApp/Backend")
-                                img.push()
-                                img.push('latest')
-                            }
+                            env.BACKEND_IMG_ID = docker.build(
+                                "${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG}",
+                                "./Application/FlaskApp/Backend"
+                            ).id
                         }
                     }
                 }
                 stage('Frontend') {
                     steps {
                         script {
+                            env.FRONTEND_IMG_ID = docker.build(
+                                "${ECR_REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG}",
+                                "./Application/FlaskApp/Frontend"
+                            ).id
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Trivy Scan') {
+            parallel {
+                stage('Scan Backend') {
+                    steps {
+                        sh '''
+                            trivy image --exit-code 1 \
+                                        --severity HIGH,CRITICAL \
+                                        --no-progress \
+                                        ${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG}
+                        '''
+                    }
+                }
+                stage('Scan Frontend') {
+                    steps {
+                        sh '''
+                            trivy image --exit-code 1 \
+                                        --severity HIGH,CRITICAL \
+                                        --no-progress \
+                                        ${ECR_REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG}
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Push to ECR') {
+            parallel {
+                stage('Push Backend') {
+                    steps {
+                        script {
                             docker.withRegistry("https://${ECR_REGISTRY}", "ecr:${AWS_REGION}:aws-credentials") {
-                                def img = docker.build("${ECR_REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG}", "./Application/FlaskApp/Frontend")
+                                def img = docker.image("${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG}")
+                                img.push()
+                                img.push('latest')
+                            }
+                        }
+                    }
+                }
+                stage('Push Frontend') {
+                    steps {
+                        script {
+                            docker.withRegistry("https://${ECR_REGISTRY}", "ecr:${AWS_REGION}:aws-credentials") {
+                                def img = docker.image("${ECR_REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG}")
                                 img.push()
                                 img.push('latest')
                             }
@@ -56,5 +107,20 @@ pipeline {
             }
         }
 
+    }
+
+    post {
+        always {
+            sh """
+                docker rmi ${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG} || true
+                docker rmi ${ECR_REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG} || true
+            """
+        }
+        success {
+            echo 'Images scanned clean and pushed to ECR successfully.'
+        }
+        failure {
+            echo 'Pipeline failed — check Trivy scan results or build logs.'
+        }
     }
 }
