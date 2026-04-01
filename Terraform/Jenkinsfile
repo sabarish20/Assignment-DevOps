@@ -26,10 +26,30 @@ pipeline {
                 }
             }
         }
+        stage('Terraform FMT') {
+            steps {
+                dir('Terraform'){
+                    sh 'terraform fmt -check'
+                }
+            }
+        }
+        stage('Terraform Validate') {
+            steps {
+                dir('Terraform'){
+                    sh 'terraform validate'
+                }
+            }
+        }
         stage('Terraform Plan') {
             steps {
                 dir('Terraform'){
-                    sh 'terraform plan -out=tfplan'
+                    script {
+                        if (params.ACTION == 'destroy') {
+                            sh 'terraform plan -destroy -out=tfplan'
+                        } else {
+                            sh 'terraform plan -out=tfplan'
+                        }
+                    }
                 }
             }
         }
@@ -44,9 +64,9 @@ pipeline {
                 dir('Terraform') {
                     script {
                         if (params.ACTION == 'destroy') {
-                            sh 'terraform destroy -auto-approve "tfplan"'
+                            sh 'terraform  apply -auto-approve tfplan'
                         } else {
-                            sh 'terraform apply -auto-approve "tfplan"'
+                            sh 'terraform apply -auto-approve tfplan'
                         }
                     }
                 }       
