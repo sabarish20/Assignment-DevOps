@@ -8,4 +8,4 @@ inst_type    = ["t2.medium"]
 max          = 3
 desired      = 2
 min          = 1
-vpc_name = "Eco-EKS-VPC"
+vpc_name     = "Eco-EKS-VPC"
