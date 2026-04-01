@@ -44,9 +44,9 @@ pipeline {
                 dir('Terraform') {
                     script {
                         if (params.ACTION == 'destroy') {
-                            sh 'terraform apply "destroyplan"'
+                            sh 'terraform destroy -auto-approve "tfplan"'
                         } else {
-                            sh 'terraform apply "tfplan"'
+                            sh 'terraform apply -auto-approve "tfplan"'
                         }
                     }
                 }       
