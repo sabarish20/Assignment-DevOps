@@ -9,8 +9,8 @@ pipeline {
     environment {
         AWS_REGION     = 'ap-south-1'
         ECR_REGISTRY   = credentials('ECR_REGISTRY')
-        BACKEND_IMAGE  = 'eco-assignment-backend'
-        FRONTEND_IMAGE = 'eco-assignment-frontend'
+        BACKEND_IMAGE  = 'ecolibirium-backend'
+        FRONTEND_IMAGE = 'ecolibirium-frontend'
         IMAGE_TAG      = "${env.BUILD_NUMBER}"
     }
 
