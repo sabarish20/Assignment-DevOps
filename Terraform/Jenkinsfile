@@ -18,12 +18,16 @@ pipeline {
         }
         stage('Terraform Init') {
             steps {
-                sh 'terraform init'
+                dir('Terraform'){
+                    sh 'terraform init'
+                }
             }
         }
         stage('Terraform Plan') {
             steps {
-                sh 'terraform plan -out=tfplan'
+                dir('Terraform'){
+                    sh 'terraform plan -out=tfplan'
+                }
             }
         }
         stage('Manual Approval') {
@@ -42,7 +46,9 @@ pipeline {
         }
         stage('Terraform Apply') {
             steps {
-                sh 'terraform apply -auto-approve tfplan'
+                dir('Terraform'){
+                    sh 'terraform apply -auto-approve tfplan'
+                }
             }
         }
     }
