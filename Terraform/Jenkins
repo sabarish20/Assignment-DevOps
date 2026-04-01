@@ -1,14 +1,35 @@
-terraform {
-  backend "s3" {
-    bucket         = "s3-terraform-jenkins-statefile"
-    key            = "s3-provisioning/terraform.tfstate"
-    region         = "ap-south-1" 
-  }
-}
-
-provider "aws" {
-  region = "ap-south-1"
-}
-resource "aws_s3_bucket" "s3_bucket" {
-  bucket  = "jenkins-sample-s3bucket-as1-terraform"
+pipeline {
+    agent {
+        docker { 
+            image 'hashicorp/terraform:1.14.7' 
+            args  '--entrypoint='
+        }
+    }
+    environment {
+        AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+        AWS_DEFAULT_REGION    = 'ap-south-1' 
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('Terraform Init') {
+            steps {
+                sh 'terraform init'
+            }
+        }
+        stage('Terraform Plan') {
+            steps {
+                sh 'terraform plan -out=tfplan'
+            }
+        }
+        stage('Terraform Apply') {
+            steps {
+                sh 'terraform apply -auto-approve tfplan'
+            }
+        }
+    }
 }
