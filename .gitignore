@@ -1,0 +1,15 @@
+.terraform
+.terraform/
+.terraform/*
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+.vscode/
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+__pycache__/*
+.venv
+.env

@@ -1,0 +1,107 @@
+pipeline {
+    agent {
+        docker {
+            image 'ubuntu:22.04'
+            args '-v /var/run/docker.sock:/var/run/docker.sock -u root'
+        }
+    }
+
+    environment {
+        AWS_REGION       = 'ap-south-1'
+        AWS_ACCOUNT_ID   =  credentials('AWS_ACCOUNT_ID')
+        ECR_REGISTRY     =  credentials('ECR_REGISTRY')
+
+        BACKEND_IMAGE    = 'ecolibirium-backend'
+        FRONTEND_IMAGE   = 'ecolibirium-frontend'
+        IMAGE_TAG        = "${env.BUILD_NUMBER}"
+
+        CLUSTER_NAME     = 'ecolibirium-eks-cluster'
+    }
+
+    stages {
+
+        stage('Setup Tools') {
+            steps {
+                sh '''
+                    apt-get update -y
+                    apt-get install -y curl unzip docker.io
+                '''
+            }
+        }
+
+        stage('Build & Push to ECR') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-credentials',
+                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                ]]) {
+                    script {
+                        docker.withRegistry("https://${ECR_REGISTRY}", "ecr:${AWS_REGION}:aws-credentials") {
+
+                            def backendImage = docker.build(
+                                "${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG}",
+                                "./FlaskApp/Backend"
+                            )
+                            backendImage.push()
+                            backendImage.push('latest')
+
+                            def frontendImage = docker.build(
+                                "${ECR_REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG}",
+                                "./FlaskApp/Frontend"
+                            )
+                            frontendImage.push()
+                            frontendImage.push('latest')
+                        }
+                    }
+                }
+            }
+        }
+
+        // Manual shell steps — no verified Helm/EKS plugin exists, this is the standard approach
+        stage('Deploy to EKS (Helm)') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-credentials',
+                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                ]]) {
+                    sh '''
+                        # Connect kubectl to the EKS cluster
+                        aws eks update-kubeconfig --region ${AWS_REGION} --name ${CLUSTER_NAME}
+
+                        # Upgrade or install the Helm release with the new image tags
+                        helm upgrade --install ecolibirium-app ./helm-chart \
+                            --namespace default \
+                            --create-namespace \
+                            --set backend.image.repository=${ECR_REGISTRY}/${BACKEND_IMAGE} \
+                            --set backend.image.tag=${IMAGE_TAG} \
+                            --set frontend.image.repository=${ECR_REGISTRY}/${FRONTEND_IMAGE} \
+                            --set frontend.image.tag=${IMAGE_TAG} \
+                            --wait \
+                            --timeout 5m
+                    '''
+                }
+            }
+        }
+
+    }
+
+    post {
+        always {
+            echo 'Cleaning up local Docker images...'
+            sh """
+                docker rmi ${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG} || true
+                docker rmi ${ECR_REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG} || true
+            """
+        }
+        success {
+            echo 'Deployment successful — Ecolibirium is live on EKS.'
+        }
+        failure {
+            echo 'Deployment failed — check the stage logs above.'
+        }
+    }
+}

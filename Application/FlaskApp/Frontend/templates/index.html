@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DevOps App — Dashboard</title>
+  <style>
+    /* ── Reset & base ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --surface-2:   #1c2128;
+      --border:      #30363d;
+      --text:        #e6edf3;
+      --muted:       #8b949e;
+      --accent:      #58a6ff;
+      --accent-dim:  #1f3a5a;
+      --green:       #3fb950;
+      --green-dim:   #12311a;
+      --red:         #f85149;
+      --red-dim:     #3d1a1a;
+      --yellow:      #d29922;
+      --yellow-dim:  #3a2d10;
+      --radius:      10px;
+      --shadow:      0 2px 12px rgba(0,0,0,.4);
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Layout ────────────────────────────────────────────────────────── */
+    .layout { display: flex; min-height: 100vh; }
+
+    /* ── Sidebar ───────────────────────────────────────────────────────── */
+    .sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 24px 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .sidebar-brand {
+      padding: 0 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), #7c5cbf);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+
+    .brand-name { font-weight: 700; font-size: 15px; color: var(--text); }
+    .brand-env  {
+      font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--muted); margin-top: 1px;
+    }
+
+    .nav { padding: 16px 0; flex: 1; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 20px;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      border-left: 3px solid transparent;
+      transition: color .15s, background .15s, border-color .15s;
+      user-select: none;
+    }
+    .nav-item:hover           { color: var(--text); background: var(--surface-2); }
+    .nav-item.active          { color: var(--accent); border-left-color: var(--accent); background: var(--accent-dim); }
+    .nav-item .icon           { font-size: 15px; width: 18px; text-align: center; }
+
+    .sidebar-footer {
+      padding: 16px 20px 0;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* ── Main content ──────────────────────────────────────────────────── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Topbar ─────────────────────────────────────────────────────────── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .topbar-title { font-size: 16px; font-weight: 600; }
+
+    .topbar-actions { display: flex; align-items: center; gap: 12px; }
+
+    .refresh-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background .15s;
+    }
+    .refresh-btn:hover { background: var(--border); }
+    .refresh-btn.spinning .spin { animation: spin .7s linear infinite; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .last-update { font-size: 12px; color: var(--muted); }
+
+    /* ── Sections ───────────────────────────────────────────────────────── */
+    .content {
+      padding: 28px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .section-heading {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text);
+    }
+
+    /* ── Cards ──────────────────────────────────────────────────────────── */
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .card-value {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .card-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* ── Badge ──────────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .badge.green  { background: var(--green-dim);  color: var(--green); }
+    .badge.red    { background: var(--red-dim);    color: var(--red); }
+    .badge.yellow { background: var(--yellow-dim); color: var(--yellow); }
+    .badge.blue   { background: var(--accent-dim); color: var(--accent); }
+
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+    /* ── Table ──────────────────────────────────────────────────────────── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead { background: var(--surface-2); }
+    th {
+      padding: 10px 16px;
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 11px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface-2); }
+
+    .mono { font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; }
+    .redacted { color: var(--muted); font-style: italic; }
+
+    /* ── Timeline / log ─────────────────────────────────────────────────── */
+    .log-box {
+      background: #010409;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      color: #7ee787;
+      max-height: 340px;
+      overflow-y: auto;
+      line-height: 1.8;
+    }
+
+    .log-line { white-space: pre-wrap; word-break: break-all; }
+    .log-line.err { color: var(--red); }
+    .log-line.warn { color: var(--yellow); }
+
+    /* ── Probe card ─────────────────────────────────────────────────────── */
+    .probe-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .probe-icon {
+      font-size: 28px;
+      width: 52px; height: 52px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .probe-icon.green  { background: var(--green-dim); }
+    .probe-icon.red    { background: var(--red-dim); }
+    .probe-icon.yellow { background: var(--yellow-dim); }
+
+    .probe-name { font-weight: 700; font-size: 15px; }
+    .probe-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .probe-status { margin-top: 6px; }
+
+    /* ── Spinner / skeleton ─────────────────────────────────────────────── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 50%, var(--surface-2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 4px;
+      height: 14px;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    /* ── Error banner ───────────────────────────────────────────────────── */
+    .error-banner {
+      background: var(--red-dim);
+      border: 1px solid var(--red);
+      color: var(--red);
+      border-radius: var(--radius);
+      padding: 12px 18px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      display: none;
+    }
+
+    /* ── Responsive ─────────────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .sidebar { display: none; }
+      .content { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ── Sidebar ───────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">⚙</div>
+      <div>
+        <div class="brand-name" id="sb-app-name">DevOps App</div>
+        <div class="brand-env"  id="sb-app-env">loading…</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-item active" data-section="overview">
+        <span class="icon">🏠</span> Overview
+      </div>
+      <div class="nav-item" data-section="health">
+        <span class="icon">💓</span> Health Probes
+      </div>
+      <div class="nav-item" data-section="config">
+        <span class="icon">🗂</span> Config / Info
+      </div>
+      <div class="nav-item" data-section="metrics">
+        <span class="icon">📊</span> Metrics
+      </div>
+      <div class="nav-item" data-section="activity">
+        <span class="icon">🕒</span> Activity Log
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div>v<span id="sb-version">—</span></div>
+      <div style="margin-top:4px">Backend: <a id="sb-backend-link" href="#" target="_blank">—</a></div>
+    </div>
+  </aside>
+
+  <!-- ── Main ──────────────────────────────────────────────────────────── -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <span class="topbar-title" id="topbar-section">Overview</span>
+      <div class="topbar-actions">
+        <span class="last-update">Last update: <span id="last-update-time">—</span></span>
+        <button class="refresh-btn" id="refresh-btn" onclick="refreshAll()">
+          <span class="spin">↻</span> Refresh
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- ── Overview ──────────────────────────────────────────────────── -->
+      <div class="section active" id="section-overview">
+        <div class="error-banner" id="ov-error"></div>
+
+        <div class="grid-2" style="grid-template-columns: repeat(auto-fill, minmax(180px,1fr))">
+          <div class="card">
+            <div class="card-label">Application</div>
+            <div class="card-value" id="ov-name" style="font-size:18px">—</div>
+            <div class="card-sub" id="ov-env">—</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Version</div>
+            <div class="card-value" id="ov-version">—</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Liveness</div>
+            <div class="card-value" id="ov-live">—</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Readiness</div>
+            <div class="card-value" id="ov-ready">—</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Uptime</div>
+            <div class="card-value" id="ov-uptime">—</div>
+            <div class="card-sub">seconds</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Hostname</div>
+            <div class="card-value mono" id="ov-host" style="font-size:13px;word-break:break-all">—</div>
+          </div>
+        </div>
+
+        <h2 class="section-heading" style="margin-top:8px">API Endpoints</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Method</th><th>Path</th><th>Description</th><th>Status</th></tr>
+            </thead>
+            <tbody id="endpoint-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Health Probes ──────────────────────────────────────────────── -->
+      <div class="section" id="section-health">
+        <h2 class="section-heading">Health Probes</h2>
+        <div style="display:flex;flex-direction:column;gap:16px;max-width:560px">
+          <div class="probe-card">
+            <div class="probe-icon" id="live-icon">💚</div>
+            <div>
+              <div class="probe-name">Liveness Probe</div>
+              <div class="probe-desc">GET /health/live — K8s restarts the pod if this fails.</div>
+              <div class="probe-status" id="live-status"><span class="badge yellow"><span class="dot"></span>checking…</span></div>
+              <div style="font-size:12px;color:var(--muted);margin-top:6px">Uptime: <span id="live-uptime">—</span>s</div>
+            </div>
+          </div>
+
+          <div class="probe-card">
+            <div class="probe-icon" id="ready-icon">💚</div>
+            <div>
+              <div class="probe-name">Readiness Probe</div>
+              <div class="probe-desc">GET /health/ready — K8s stops traffic if this fails.</div>
+              <div class="probe-status" id="ready-status"><span class="badge yellow"><span class="dot"></span>checking…</span></div>
+              <div style="font-size:12px;color:var(--muted);margin-top:6px" id="ready-checks"></div>
+            </div>
+          </div>
+        </div>
+
+        <h2 class="section-heading" style="margin-top:28px">Raw Probe Responses</h2>
+        <div class="grid-3">
+          <div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Liveness</div>
+            <div class="log-box" id="raw-live">—</div>
+          </div>
+          <div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Readiness</div>
+            <div class="log-box" id="raw-ready">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Config / Info ──────────────────────────────────────────────── -->
+      <div class="section" id="section-config">
+        <h2 class="section-heading">Config / Info</h2>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:20px">
+          Fetched from <code class="mono">/info</code>. Sensitive values are redacted by the backend.
+          Use this page to verify that ConfigMap and Secret values were correctly injected into the pod.
+        </p>
+        <div id="config-tables"></div>
+      </div>
+
+      <!-- ── Metrics ────────────────────────────────────────────────────── -->
+      <div class="section" id="section-metrics">
+        <h2 class="section-heading">Metrics</h2>
+        <div class="grid-2" id="metrics-grid"></div>
+        <div style="margin-top:20px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Raw response from <code class="mono">/metrics</code></div>
+          <div class="log-box" id="raw-metrics">—</div>
+        </div>
+      </div>
+
+      <!-- ── Activity Log ───────────────────────────────────────────────── -->
+      <div class="section" id="section-activity">
+        <h2 class="section-heading">Activity Log</h2>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:16px">
+          Calls made by this dashboard to the backend API since the page loaded.
+        </p>
+        <div class="log-box" id="activity-log">Waiting for first refresh…</div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<script>
+  /* ── Configuration injected by Flask ─────────────────────────────────── */
+  const BACKEND_URL = "{{ backend_url }}".replace(/\/$/, "");
+  const APP_ENV     = "{{ app_env }}";
+
+  /* ── State ───────────────────────────────────────────────────────────── */
+  const activityLog = [];
+
+  /* ── Navigation ──────────────────────────────────────────────────────── */
+  const sectionTitles = {
+    overview: "Overview",
+    health:   "Health Probes",
+    config:   "Config / Info",
+    metrics:  "Metrics",
+    activity: "Activity Log",
+  };
+
+  document.querySelectorAll(".nav-item").forEach(item => {
+    item.addEventListener("click", () => {
+      document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+      document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+      item.classList.add("active");
+      const sec = item.dataset.section;
+      document.getElementById("section-" + sec).classList.add("active");
+      document.getElementById("topbar-section").textContent = sectionTitles[sec];
+    });
+  });
+
+  /* ── API helper ──────────────────────────────────────────────────────── */
+  async function apiFetch(path) {
+    const url  = BACKEND_URL + path;
+    const start = Date.now();
+    try {
+      const res  = await fetch(url);
+      const data = await res.json();
+      const ms   = Date.now() - start;
+      log(`${res.status} ${path}  (${ms}ms)`);
+      return { ok: res.ok, status: res.status, data };
+    } catch (err) {
+      log(`ERR ${path}  — ${err.message}`, "err");
+      return { ok: false, status: 0, data: null };
+    }
+  }
+
+  /* ── Logger ──────────────────────────────────────────────────────────── */
+  function log(msg, level = "info") {
+    const ts = new Date().toISOString().replace("T", " ").slice(0, 23);
+    activityLog.unshift({ ts, msg, level });
+    if (activityLog.length > 200) activityLog.pop();
+    renderActivityLog();
+  }
+
+  function renderActivityLog() {
+    const box = document.getElementById("activity-log");
+    box.innerHTML = activityLog.map(e =>
+      `<div class="log-line ${e.level === "err" ? "err" : ""}">${e.ts}  ${e.msg}</div>`
+    ).join("");
+  }
+
+  /* ── Refresh all ─────────────────────────────────────────────────────── */
+  async function refreshAll() {
+    const btn = document.getElementById("refresh-btn");
+    btn.classList.add("spinning");
+
+    await Promise.all([
+      fetchHome(),
+      fetchLiveness(),
+      fetchReadiness(),
+      fetchInfo(),
+      fetchMetrics(),
+    ]);
+
+    document.getElementById("last-update-time").textContent =
+      new Date().toLocaleTimeString();
+    btn.classList.remove("spinning");
+  }
+
+  /* ── /  (home) ───────────────────────────────────────────────────────── */
+  async function fetchHome() {
+    const { ok, data } = await apiFetch("/");
+    if (!ok || !data) return;
+
+    document.getElementById("ov-name").textContent    = data.application ?? "—";
+    document.getElementById("ov-version").textContent = data.version     ?? "—";
+    document.getElementById("ov-env").textContent     = data.environment ?? "—";
+    document.getElementById("sb-app-name").textContent = data.application ?? "DevOps App";
+    document.getElementById("sb-app-env").textContent  = data.environment ?? "";
+    document.getElementById("sb-version").textContent  = data.version     ?? "—";
+
+    const link = document.getElementById("sb-backend-link");
+    link.textContent = BACKEND_URL;
+    link.href = BACKEND_URL;
+
+    renderEndpointTable();
+  }
+
+  /* ── Endpoint table ──────────────────────────────────────────────────── */
+  function renderEndpointTable() {
+    const rows = [
+      { method: "GET", path: "/",            desc: "App identity" },
+      { method: "GET", path: "/health/live", desc: "Liveness probe (K8s)" },
+      { method: "GET", path: "/health/ready",desc: "Readiness probe (K8s)" },
+      { method: "GET", path: "/info",         desc: "Redacted config dump" },
+      { method: "GET", path: "/metrics",      desc: "Lightweight metrics" },
+      { method: "GET", path: "/debug",        desc: "Env dump (dev/staging only)" },
+    ];
+    const tbody = document.getElementById("endpoint-table-body");
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td><span class="badge blue">${r.method}</span></td>
+        <td><code class="mono"><a href="${BACKEND_URL}${r.path}" target="_blank">${r.path}</a></code></td>
+        <td>${r.desc}</td>
+        <td><span class="badge green"><span class="dot"></span>available</span></td>
+      </tr>`).join("");
+  }
+
+  /* ── /health/live ────────────────────────────────────────────────────── */
+  async function fetchLiveness() {
+    const { ok, data } = await apiFetch("/health/live");
+
+    const iconEl   = document.getElementById("live-icon");
+    const statusEl = document.getElementById("live-status");
+    const uptimeEl = document.getElementById("live-uptime");
+    const rawEl    = document.getElementById("raw-live");
+    const ovEl     = document.getElementById("ov-live");
+
+    if (ok && data) {
+      iconEl.textContent   = "💚";
+      iconEl.className     = "probe-icon green";
+      statusEl.innerHTML   = badge("green", "alive");
+      uptimeEl.textContent = data.uptime_seconds ?? "—";
+      rawEl.textContent    = JSON.stringify(data, null, 2);
+      ovEl.innerHTML       = badge("green", "alive");
+    } else {
+      iconEl.textContent = "🔴";
+      iconEl.className   = "probe-icon red";
+      statusEl.innerHTML = badge("red", "unreachable");
+      ovEl.innerHTML     = badge("red", "unreachable");
+      rawEl.textContent  = "Could not reach /health/live";
+    }
+  }
+
+  /* ── /health/ready ───────────────────────────────────────────────────── */
+  async function fetchReadiness() {
+    const { ok, status, data } = await apiFetch("/health/ready");
+
+    const iconEl   = document.getElementById("ready-icon");
+    const statusEl = document.getElementById("ready-status");
+    const checksEl = document.getElementById("ready-checks");
+    const rawEl    = document.getElementById("raw-ready");
+    const ovEl     = document.getElementById("ov-ready");
+
+    if (data) {
+      const isReady = data.status === "ready";
+      iconEl.textContent = isReady ? "💚" : "🔴";
+      iconEl.className   = "probe-icon " + (isReady ? "green" : "red");
+      statusEl.innerHTML = isReady ? badge("green","ready") : badge("red","not ready");
+      ovEl.innerHTML     = isReady ? badge("green","ready") : badge("red","not ready");
+
+      if (data.checks) {
+        checksEl.innerHTML = "Checks: " + Object.entries(data.checks)
+          .map(([k, v]) => `<strong>${k}</strong>: ${v}`).join(" · ");
+      }
+      rawEl.textContent = JSON.stringify(data, null, 2);
+    } else {
+      iconEl.textContent = "🔴";
+      iconEl.className   = "probe-icon red";
+      statusEl.innerHTML = badge("red", "unreachable");
+      ovEl.innerHTML     = badge("red", "unreachable");
+      rawEl.textContent  = "Could not reach /health/ready";
+    }
+  }
+
+  /* ── /info ───────────────────────────────────────────────────────────── */
+  async function fetchInfo() {
+    const { ok, data } = await apiFetch("/info");
+    const container = document.getElementById("config-tables");
+    const ovHost    = document.getElementById("ov-host");
+
+    if (!ok || !data) {
+      container.innerHTML = `<div class="error-banner" style="display:block">Could not reach /info</div>`;
+      return;
+    }
+
+    ovHost.textContent = data.hostname ?? "—";
+
+    let html = "";
+
+    if (data.config) {
+      for (const [section, values] of Object.entries(data.config)) {
+        html += `
+          <h3 style="font-size:14px;font-weight:700;color:var(--muted);text-transform:uppercase;
+                     letter-spacing:.08em;margin:0 0 10px">${section}</h3>
+          <div class="table-wrap" style="margin-bottom:24px">
+            <table>
+              <thead><tr><th>Key</th><th>Value</th></tr></thead>
+              <tbody>
+                ${Object.entries(values).map(([k, v]) => `
+                  <tr>
+                    <td class="mono">${k}</td>
+                    <td class="${String(v).includes("REDACTED") || String(v).includes("not set") ? "redacted" : "mono"}">${v}</td>
+                  </tr>`).join("")}
+              </tbody>
+            </table>
+          </div>`;
+      }
+    }
+
+    html += `
+      <h3 style="font-size:14px;font-weight:700;color:var(--muted);text-transform:uppercase;
+                 letter-spacing:.08em;margin:0 0 10px">Pod</h3>
+      <div class="table-wrap" style="margin-bottom:24px">
+        <table><thead><tr><th>Key</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">hostname</td><td class="mono">${data.hostname ?? "—"}</td></tr>
+          <tr><td class="mono">timestamp</td><td class="mono">${data.timestamp ?? "—"}</td></tr>
+        </tbody></table>
+      </div>`;
+
+    container.innerHTML = html;
+  }
+
+  /* ── /metrics ────────────────────────────────────────────────────────── */
+  async function fetchMetrics() {
+    const { ok, data } = await apiFetch("/metrics");
+    const grid  = document.getElementById("metrics-grid");
+    const rawEl = document.getElementById("raw-metrics");
+
+    if (!ok || !data) {
+      grid.innerHTML    = `<div class="error-banner" style="display:block">Could not reach /metrics — is ENABLE_METRICS=true?</div>`;
+      rawEl.textContent = "Could not reach /metrics";
+      return;
+    }
+
+    rawEl.textContent = JSON.stringify(data, null, 2);
+
+    const items = [
+      { label: "App Name",    value: data.app_name    ?? "—" },
+      { label: "Version",     value: data.app_version ?? "—" },
+      { label: "Environment", value: data.environment ?? "—" },
+      { label: "Uptime (s)",  value: data.uptime_seconds ?? "—" },
+      { label: "Ready",       value: data.ready !== undefined ? (data.ready ? "yes" : "no") : "—" },
+    ];
+
+    grid.innerHTML = items.map(i => `
+      <div class="card">
+        <div class="card-label">${i.label}</div>
+        <div class="card-value" style="font-size:20px">${i.value}</div>
+      </div>`).join("");
+
+    document.getElementById("ov-uptime").textContent = data.uptime_seconds ?? "—";
+  }
+
+  /* ── Helpers ─────────────────────────────────────────────────────────── */
+  function badge(color, text) {
+    return `<span class="badge ${color}"><span class="dot"></span>${text}</span>`;
+  }
+
+  /* ── Auto-refresh every 30 s ─────────────────────────────────────────── */
+  refreshAll();
+  setInterval(refreshAll, 30_000);
+</script>
+
+</body>
+</html>

@@ -1,14 +1,22 @@
-terraform {
-  backend "s3" {
-    bucket = "s3-terraform-jenkins-statefile"
-    key    = "s3-provisioning/terraform.tfstate"
-    region = "ap-south-1"
-  }
+module "vpc" {
+  source       = "./modules/VPC"
+  cluster_name = var.cluster_name
+  cidr         = var.cidr_block
+  az           = var.az
+  vpc_name     = var.vpc_name
 }
 
-provider "aws" {
-  region = "ap-south-1"
-}
-resource "aws_s3_bucket" "s3_bucket" {
-  bucket = "jenkins-sample-s3bucket-as1-terraform"
+module "eks" {
+  source       = "./modules/EKS"
+  allowed_cidr = var.allowed_cidr
+  ami          = var.ami
+  eks_name     = var.cluster_name # Reusing cluster_name so they always match
+  eks_version  = var.eks_version
+  inst_type    = var.inst_type
+  max          = var.max
+  desired      = var.desired
+  min          = var.min
+  pubsub       = module.vpc.pubsubid
+  pvtsub       = module.vpc.pvtsubid
+  vpcid        = module.vpc.vpcid
 }

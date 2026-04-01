@@ -1,0 +1,11 @@
+cidr_block   = "10.0.0.0/16"
+az           = ["ap-south-1a", "ap-south-1b"]
+cluster_name = "Eco-EKS-Cluster"
+allowed_cidr = ["0.0.0.0/0"]
+ami          = "AL2_x86_64"
+eks_version  = "1.31"
+inst_type    = ["t2.medium"]
+max          = 3
+desired      = 2
+min          = 1
+vpc_name = "Eco-EKS-VPC"

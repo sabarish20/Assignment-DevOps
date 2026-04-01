@@ -1,0 +1,11 @@
+variable "eks_version" { type = string }
+variable "pubsub" { type = list(string) }
+variable "pvtsub" { type = list(string) }
+variable "allowed_cidr" { type = list(string) }
+variable "eks_name" { type = string }
+variable "vpcid" { type = string }
+variable "max" { type = number }
+variable "min" { type = number }
+variable "desired" { type = number }
+variable "inst_type" { type = list(string) }
+variable "ami" { type = string }

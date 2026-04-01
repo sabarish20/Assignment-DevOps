@@ -1,0 +1,11 @@
+variable "cidr_block" { type = string }
+variable "az" { type = list(string) }
+variable "cluster_name" { type = string }
+variable "allowed_cidr" { type = list(string) }
+variable "ami" { type = string }
+variable "eks_version" { type = string }
+variable "inst_type" { type = list(string) }
+variable "max" { type = number }
+variable "desired" { type = number }
+variable "min" { type = number }
+variable "vpc_name" { type = string }
