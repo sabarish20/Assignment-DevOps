@@ -24,7 +24,7 @@ pipeline {
                 dir('Terraform'){
                     sh 'terraform init'
                 }
-            }
+            } 
         }
         stage('Terraform FMT') {
             steps {
@@ -64,7 +64,7 @@ pipeline {
                 dir('Terraform') {
                     script {
                         if (params.ACTION == 'destroy') {
-                            sh 'terraform  apply -auto-approve'
+                            sh 'terraform  destroy -auto-approve'
                         } else {
                             sh 'terraform apply -auto-approve'
                         }
