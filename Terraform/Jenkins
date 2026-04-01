@@ -26,6 +26,20 @@ pipeline {
                 sh 'terraform plan -out=tfplan'
             }
         }
+        stage('Manual Approval') {
+            agent none 
+            steps {
+                script {
+                    def userInput = input(
+                        id: 'userInput',
+                        message: 'Review the Terraform Plan. Do you want to apply these changes?',
+                        parameters: [
+                            [$class: 'BooleanParameterDefinition', defaultValue: false, description: 'Terraform Changes', name: 'confirm']
+                        ]
+                    )
+                }
+            }
+        }
         stage('Terraform Apply') {
             steps {
                 sh 'terraform apply -auto-approve tfplan'
