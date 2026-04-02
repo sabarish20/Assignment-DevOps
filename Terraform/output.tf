@@ -35,5 +35,5 @@ output "node_security_group_id" {
 }
 
 output "aws_load_balancer_controller_role_arn" {
-  value = aws_iam_role.aws_load_balancer_controller.arn
+  value = module.eks.aws_load_balancer_controller_role_arn
 }
