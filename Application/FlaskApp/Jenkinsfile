@@ -12,6 +12,12 @@ pipeline {
         BACKEND_IMAGE  = 'ecolibirium-backend'
         FRONTEND_IMAGE = 'ecolibirium-frontend'
         IMAGE_TAG      = "${env.BUILD_NUMBER}"
+        EKS_CLUSTER     = credentials('EKS_CLUSTER_NAME')
+        HELM_RELEASE    = 'assignment-eco'
+        HELM_CHART_PATH = './Helm'
+        HELM_NAMESPACE  = 'ecolibirium'
+        GITHUB_EMAIL    = credentials('GITHUB_EMAIL')
+        GITHUB_USERNAME = credentials('GITHUB_USERNAME')
     }
 
     stages {
@@ -20,12 +26,23 @@ pipeline {
             steps {
                 sh '''
                     apt-get update -y
-                    apt-get install -y curl unzip docker.io wget apt-transport-https gnupg
+                    apt-get install -y curl unzip docker.io wget apt-transport-https gnupg git
 
                     wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | apt-key add -
                     echo "deb https://aquasecurity.github.io/trivy-repo/deb generic main" > /etc/apt/sources.list.d/trivy.list
                     apt-get update -y
                     apt-get install -y trivy
+
+                    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+                    unzip -q awscliv2.zip && ./aws/install
+
+                    curl -LO "https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                    chmod +x kubectl && mv kubectl /usr/local/bin/kubectl
+
+                    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+                    wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+                    chmod +x /usr/local/bin/yq
                 '''
             }
         }
@@ -107,20 +124,73 @@ pipeline {
             }
         }
 
-    }
+        stage('Update Helm Image Tags') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'github-pat',
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_TOKEN'
+                )]) {
+                    sh '''
+                        yq e '.backend.image.tag = "'${IMAGE_TAG}'"'  -i ${HELM_CHART_PATH}/values.yaml
+                        yq e '.frontend.image.tag = "'${IMAGE_TAG}'"' -i ${HELM_CHART_PATH}/values.yaml
 
+                        git config user.email "${GITHUB_EMAIL}"
+                        git config user.name  "${GITHUB_USERNAME}"
+
+                        git add ${HELM_CHART_PATH}/values.yaml
+                        git commit -m "ci: update image tags to build ${IMAGE_TAG} [skip ci]"
+                        
+                        REPO_URL=$(git remote get-url origin | sed 's|https://||')
+                        git push https://${GIT_USER}:${GIT_TOKEN}@${REPO_URL} HEAD:main
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to EKS') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-credentials'
+                ]]) {
+                    sh '''
+                        aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER}
+                        
+
+                        kubectl get namespace ${HELM_NAMESPACE} || kubectl create namespace ${HELM_NAMESPACE}
+                        
+
+                        helm upgrade --install ${HELM_RELEASE} ${HELM_CHART_PATH} \
+                            --namespace ${HELM_NAMESPACE} \
+                            --set backend.image.tag=${IMAGE_TAG} \
+                            --set frontend.image.tag=${IMAGE_TAG} \
+                            --wait \
+                            --timeout 5m
+
+                        kubectl rollout status deployment/assignment-eco-backend-deployment -n ${HELM_NAMESPACE} --timeout=3m
+                        
+                        kubectl rollout status deployment/assignment-eco-frontend-deployment -n ${HELM_NAMESPACE} --timeout=3m
+                    '''
+                }
+            }
+        }
+    }
     post {
         always {
             sh """
-                docker rmi ${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG} || true
+                docker rmi ${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG}  || true
                 docker rmi ${ECR_REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG} || true
             """
         }
         success {
-            echo 'Images scanned clean and pushed to ECR successfully.'
+            echo "Build ${IMAGE_TAG} deployed to EKS successfully."
         }
         failure {
-            echo 'Pipeline failed — check Trivy scan results or build logs.'
+            sh '''
+                helm rollback ${HELM_RELEASE} 0 --namespace ${HELM_NAMESPACE} || true
+            '''
+            echo 'Pipeline failed - rolled back to previous Helm revision.'
         }
     }
 }
