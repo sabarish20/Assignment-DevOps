@@ -19,6 +19,24 @@ pipeline {
                 checkout scm
             }
         }
+        stage('Setup Checkov') {
+            steps {
+                sh '''
+                    apk add --no-cache python3 py3-pip
+                    pip3 install checkov --quiet
+                '''
+            }
+        }
+        stage('Checkov IaC Scan') {
+            steps {
+                sh '''
+                    checkov -d Terraform \
+                            --hard-fail-on CRITICAL \
+                            --output cli \
+                            --quiet
+                '''
+            }
+        }
         stage('Terraform Init') {
             steps {
                 dir('Terraform'){
