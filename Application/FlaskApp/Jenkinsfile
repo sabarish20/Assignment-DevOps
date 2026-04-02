@@ -184,25 +184,22 @@ pipeline {
                         kubectl rollout status deployment/assignment-eco-backend-deployment -n ${HELM_NAMESPACE} --timeout=3m
                         
                         kubectl rollout status deployment/assignment-eco-frontend-deployment -n ${HELM_NAMESPACE} --timeout=3m
+
+                        docker rmi ${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG}  || true
+                        docker rmi ${ECR_REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG} || true
+                        
+                        chown -R 1000:1000 ${WORKSPACE}
                     '''
                 }
             }
         }
     }
     post {
-        always {
-            node('') {
-                sh '''
-                    docker rmi ${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG}  || true
-                    docker rmi ${ECR_REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG} || true
-                '''
-                }
-            }
-            success {
-                echo "Build ${IMAGE_TAG} deployed to EKS successfully."
-            }
-            failure {
-                echo 'Pipeline Failed'
-            }
+        success {
+            echo "Build ${IMAGE_TAG} deployed to EKS successfully."
         }
+        failure {
+            echo 'Pipeline Failed'
+        }
+    }
 }
