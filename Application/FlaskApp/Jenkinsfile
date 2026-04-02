@@ -130,6 +130,31 @@ pipeline {
             }
         }
 
+        stage('Helm Checks') {
+            parallel {
+                stage('Helm Lint') {
+                    steps {
+                        sh '''
+                            echo "--- Running Helm Lint ---"
+                            helm lint ${HELM_CHART_PATH} --strict
+                        '''
+                    }
+                }
+                stage('Checkov IaC Scan') {
+                    steps {
+                        sh '''
+                            echo "--- Running Checkov on Helm Chart ---"
+                            checkov -d ${HELM_CHART_PATH} \
+                                --framework helm \
+                                --output cli \
+                                --compact \
+                                --soft-fail-on LOW,MEDIUM,HIGH
+                        '''
+                    }
+                }
+            }
+        }
+
         stage('Update Helm Image Tags') {
             steps {
                 withCredentials([usernamePassword(
