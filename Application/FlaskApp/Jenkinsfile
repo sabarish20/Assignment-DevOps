@@ -196,6 +196,7 @@ pipeline {
                     docker rmi ${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG}  || true
                     docker rmi ${ECR_REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG} || true
                 '''
+                }
             }
             success {
                 echo "Build ${IMAGE_TAG} deployed to EKS successfully."
@@ -204,5 +205,4 @@ pipeline {
                 echo 'Pipeline Failed'
             }
         }
-    }
 }
