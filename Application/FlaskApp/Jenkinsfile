@@ -191,7 +191,7 @@ pipeline {
     }
     post {
         always {
-            node {
+            node('') {
                 sh '''
                     docker rmi ${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG}  || true
                     docker rmi ${ECR_REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG} || true
