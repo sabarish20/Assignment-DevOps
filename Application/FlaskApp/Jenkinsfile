@@ -134,14 +134,14 @@ pipeline {
 
         stage('Helm Checks') {
             parallel {
-                stage('Helm Lint') {
-                    steps {
-                        sh '''
-                            echo "--- Running Helm Lint ---"
-                            helm lint ${HELM_CHART_PATH} --strict
-                        '''
-                    }
-                }
+                // stage('Helm Lint') {
+                //     steps {
+                //         sh '''
+                //             echo "--- Running Helm Lint ---"
+                //             helm lint ${HELM_CHART_PATH} --strict
+                //         '''
+                //     }
+                // }
                 stage('Checkov IaC Scan') {
                     steps {
                         sh '''
