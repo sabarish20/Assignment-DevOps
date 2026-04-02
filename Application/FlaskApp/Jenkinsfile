@@ -80,6 +80,7 @@ pipeline {
                             trivy image --exit-code 1 \
                                         --severity CRITICAL \
                                         --no-progress \
+                                        --scanners vuln \
                                         ${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG}
                         '''
                     }
@@ -90,6 +91,7 @@ pipeline {
                             trivy image --exit-code 1 \
                                         --severity CRITICAL \
                                         --no-progress \
+                                        --scanners vuln \
                                         ${ECR_REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG}
                         '''
                     }
@@ -194,9 +196,6 @@ pipeline {
             echo "Build ${IMAGE_TAG} deployed to EKS successfully."
         }
         failure {
-            sh '''
-                helm rollback ${HELM_RELEASE} 0 --namespace ${HELM_NAMESPACE} || true
-            '''
             echo 'Pipeline failed - rolled back to previous Helm revision.'
         }
     }
