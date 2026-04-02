@@ -25,6 +25,9 @@ pipeline {
         stage('Setup Tools') {
             steps {
                 sh '''
+
+                    export DEBIAN_FRONTEND=noninteractive
+                    
                     apt-get update -y
                     apt-get install -y curl unzip docker.io wget apt-transport-https gnupg git awscli
 
