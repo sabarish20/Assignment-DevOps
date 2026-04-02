@@ -3,7 +3,7 @@ backend:
   replicaCount: 2
   image:
     repository: "790701472446.dkr.ecr.ap-south-1.amazonaws.com/ecolibirium-backend"
-    tag: "9"
+    tag: "15"
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -36,7 +36,7 @@ frontend:
   replicaCount: 2
   image:
     repository: "790701472446.dkr.ecr.ap-south-1.amazonaws.com/ecolibirium-frontend"
-    tag: "9"
+    tag: "15"
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
