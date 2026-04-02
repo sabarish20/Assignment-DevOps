@@ -4,7 +4,7 @@ backend:
 
   image:
     repository: "790701472446.dkr.ecr.ap-south-1.amazonaws.com/ecolibirium-backend"         
-    tag: "4"
+    tag: "5"
     pullPolicy: IfNotPresent
 
   service:
@@ -44,7 +44,7 @@ frontend:
 
   image:
     repository: "790701472446.dkr.ecr.ap-south-1.amazonaws.com/ecolibirium-frontend"        
-    tag: "4"
+    tag: "5"
     pullPolicy: IfNotPresent
 
   service:
@@ -63,7 +63,7 @@ frontend:
     FRONTEND_PORT: "8080"
     APP_ENV: "production"
     LOG_LEVEL: "INFO"
-    BACKEND_URL: "http://k8s-ingressn-albtongi-a389908bd9-1858470823.ap-south-1.elb.amazonaws.com/api"
+    BACKEND_URL: "http://assignment-eco-backend-svc:5000/"
 
 ingress:
   className: "nginx"
