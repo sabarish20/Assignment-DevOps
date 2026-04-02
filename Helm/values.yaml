@@ -1,16 +1,13 @@
 namespace: ecolibirium
 backend:
   replicaCount: 2
-
   image:
-    repository: "790701472446.dkr.ecr.ap-south-1.amazonaws.com/ecolibirium-backend"         
-    tag: "5"
+    repository: "790701472446.dkr.ecr.ap-south-1.amazonaws.com/ecolibirium-backend"
+    tag: "9"
     pullPolicy: IfNotPresent
-
   service:
     type: ClusterIP
     port: 5000
-
   resources:
     requests:
       cpu: "100m"
@@ -18,7 +15,6 @@ backend:
     limits:
       cpu: "500m"
       memory: "256Mi"
-
   config:
     APP_NAME: "Eco-Assignment-App"
     APP_ENV: "Production"
@@ -31,26 +27,20 @@ backend:
     MAX_CONTENT_LENGTH: "16777216"
     LOG_LEVEL: "INFO"
     LOG_FORMAT: "json"
-
   secret:
     DB_PASSWORD: ""
     SECRET_KEY: ""
     API_KEY: ""
     JWT_SECRET: ""
-
-
 frontend:
   replicaCount: 2
-
   image:
-    repository: "790701472446.dkr.ecr.ap-south-1.amazonaws.com/ecolibirium-frontend"        
-    tag: "5"
+    repository: "790701472446.dkr.ecr.ap-south-1.amazonaws.com/ecolibirium-frontend"
+    tag: "9"
     pullPolicy: IfNotPresent
-
   service:
     type: ClusterIP
     port: 8080
-
   resources:
     requests:
       cpu: "50m"
@@ -58,13 +48,11 @@ frontend:
     limits:
       cpu: "200m"
       memory: "128Mi"
-
   config:
     FRONTEND_PORT: "8080"
     APP_ENV: "production"
     LOG_LEVEL: "INFO"
     BACKEND_URL: "http://assignment-eco-backend-svc:5000/"
-
 ingress:
   className: "nginx"
-  host: "ecolibirium.assignment.com"   
+  host: "ecolibirium.assignment.com"
