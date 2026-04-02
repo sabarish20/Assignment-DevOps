@@ -52,7 +52,7 @@ frontend:
     FRONTEND_PORT: "8080"
     APP_ENV: "production"
     LOG_LEVEL: "INFO"
-    BACKEND_URL: "http://assignment-eco-backend-svc:5000/"
+    BACKEND_URL: "http://assignment-eco-backend-svc:5000"
 ingress:
   className: "nginx"
   host: "ecolibirium.assignment.com"
