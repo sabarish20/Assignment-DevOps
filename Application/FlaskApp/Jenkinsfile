@@ -29,7 +29,7 @@ pipeline {
                     export DEBIAN_FRONTEND=noninteractive
 
                     apt-get update -y
-                    apt-get install -y curl unzip docker.io wget apt-transport-https gnupg git 
+                    apt-get install -y curl unzip docker.io wget apt-transport-https gnupg git python3-pip
 
                     wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | apt-key add -
                     echo "deb https://aquasecurity.github.io/trivy-repo/deb generic main" > /etc/apt/sources.list.d/trivy.list
