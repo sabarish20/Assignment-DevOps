@@ -132,6 +132,9 @@ pipeline {
                     passwordVariable: 'GIT_TOKEN'
                 )]) {
                     sh '''
+
+                        git config --global --add safe.directory "${WORKSPACE}"
+
                         yq e '.backend.image.tag = "'${IMAGE_TAG}'"'  -i ${HELM_CHART_PATH}/values.yaml
                         yq e '.frontend.image.tag = "'${IMAGE_TAG}'"' -i ${HELM_CHART_PATH}/values.yaml
 
@@ -161,12 +164,16 @@ pipeline {
                         kubectl get namespace ${HELM_NAMESPACE} || kubectl create namespace ${HELM_NAMESPACE}
                         
 
-                        helm upgrade --install ${HELM_RELEASE} ${HELM_CHART_PATH} \
-                            --namespace ${HELM_NAMESPACE} \
-                            --set backend.image.tag=${IMAGE_TAG} \
-                            --set frontend.image.tag=${IMAGE_TAG} \
-                            --wait \
-                            --timeout 5m
+                        if ! helm upgrade --install ${HELM_RELEASE} ${HELM_CHART_PATH} \
+                                --namespace ${HELM_NAMESPACE} \
+                                --set backend.image.tag=${IMAGE_TAG} \
+                                --set frontend.image.tag=${IMAGE_TAG} \
+                                --wait \
+                                --timeout 5m; then 
+                            echo "Helm deploy failed — rolling back to previous revision..."
+                            helm rollback ${HELM_RELEASE} 0 --namespace ${HELM_NAMESPACE} || true
+                            exit 1
+                        fi
 
                         kubectl rollout status deployment/assignment-eco-backend-deployment -n ${HELM_NAMESPACE} --timeout=3m
                         
@@ -178,10 +185,10 @@ pipeline {
     }
     post {
         always {
-            sh """
+            sh '''
                 docker rmi ${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG}  || true
                 docker rmi ${ECR_REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG} || true
-            """
+            '''
         }
         success {
             echo "Build ${IMAGE_TAG} deployed to EKS successfully."
