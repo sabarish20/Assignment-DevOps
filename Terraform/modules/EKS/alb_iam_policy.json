@@ -25,6 +25,7 @@
                 "ec2:DescribeSubnets",
                 "ec2:DescribeSecurityGroups",
                 "ec2:DescribeInstances",
+                "ec2:GetSecurityGroupsForVpc",
                 "ec2:DescribeNetworkInterfaces",
                 "ec2:DescribeTags",
                 "ec2:GetCoipPoolUsage",
@@ -38,6 +39,7 @@
                 "elasticloadbalancing:DescribeTargetGroups",
                 "elasticloadbalancing:DescribeTargetGroupAttributes",
                 "elasticloadbalancing:DescribeTargetHealth",
+                "elasticloadbalancing:DescribeListenerAttributes",
                 "elasticloadbalancing:DescribeTags",
                 "elasticloadbalancing:DescribeTrustStores"
             ],

@@ -21,3 +21,7 @@ output "additional_security_group_id" {
 output "node_security_group_id" {
   value = aws_security_group.workernode_sg.id
 }
+
+output "aws_load_balancer_controller_role_arn" {
+  value = aws_iam_role.aws_load_balancer_controller.arn
+}

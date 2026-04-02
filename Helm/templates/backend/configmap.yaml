@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: assignment-eco-backend-config
+  namespace: {{ .Values.namespace }}
+data:
+  {{- toYaml .Values.backend.config | nindent 2 }}
