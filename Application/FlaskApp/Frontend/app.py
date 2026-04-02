@@ -1,14 +1,3 @@
-"""
-Frontend — Flask Template Server
-==================================
-Serves the single-page dashboard (index.html) and injects
-the backend API URL so the browser knows where to fetch data from.
-
-The frontend and backend are fully decoupled:
-  - This server owns zero business logic.
-  - All data comes from the backend API via browser-side fetch() calls.
-  - BACKEND_URL is the only coupling point — supplied by a K8s ConfigMap.
-"""
 
 import logging
 import sys

@@ -20,8 +20,8 @@ backend:
       memory: "256Mi"
 
   config:
-    APP_NAME: "ecolibirium-app"
-    APP_ENV: "production"
+    APP_NAME: "Eco-Assignment-App"
+    APP_ENV: "Production"
     APP_VERSION: "1.0.0"
     APP_PORT: "5000"
     CORS_ORIGIN: "*"
@@ -63,7 +63,7 @@ frontend:
     FRONTEND_PORT: "8080"
     APP_ENV: "production"
     LOG_LEVEL: "INFO"
-    BACKEND_URL: "http://assignment-eco-backend-svc:5000"
+    BACKEND_URL: "http://k8s-ingressn-albtongi-a389908bd9-1858470823.ap-south-1.elb.amazonaws.com/api"
 
 ingress:
   className: "nginx"
