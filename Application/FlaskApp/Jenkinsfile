@@ -191,16 +191,18 @@ pipeline {
     }
     post {
         always {
-            sh '''
-                docker rmi ${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG}  || true
-                docker rmi ${ECR_REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG} || true
-            '''
-        }
-        success {
-            echo "Build ${IMAGE_TAG} deployed to EKS successfully."
-        }
-        failure {
-            echo 'Pipeline Failed'
+            node {
+                sh '''
+                    docker rmi ${ECR_REGISTRY}/${BACKEND_IMAGE}:${IMAGE_TAG}  || true
+                    docker rmi ${ECR_REGISTRY}/${FRONTEND_IMAGE}:${IMAGE_TAG} || true
+                '''
+            }
+            success {
+                echo "Build ${IMAGE_TAG} deployed to EKS successfully."
+            }
+            failure {
+                echo 'Pipeline Failed'
+            }
         }
     }
 }
