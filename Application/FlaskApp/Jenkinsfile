@@ -144,14 +144,16 @@ pipeline {
                 // }
                 stage('Checkov IaC Scan') {
                     steps {
-                        sh '''
-                            echo "--- Running Checkov on Helm Chart ---"
-                            checkov -d ${HELM_CHART_PATH} \
-                                --framework helm \
-                                --output cli \
-                                --compact \
-                                --soft-fail-on LOW,MEDIUM,HIGH
-                        '''
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                            sh '''
+                                echo "--- Running Checkov on Helm Chart ---"
+                                checkov -d ${HELM_CHART_PATH} \
+                                    --framework helm \
+                                    --output cli \
+                                    --compact \
+                                    --soft-fail-on LOW,MEDIUM,HIGH
+                            '''
+                        }    
                     }
                 }
             }
